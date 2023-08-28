@@ -20,6 +20,7 @@ import os
 import platform
 import subprocess
 
+
 import robosuite.macros as macros
 
 _SYSTEM = platform.system()
@@ -94,6 +95,7 @@ class MjRenderContext:
         self.cam = mujoco.MjvCamera()
         self.cam.fixedcamid = 0
         self.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
+    
 
         # options for visual / collision mesh can be set externally, e.g. vopt.geomgroup[0], vopt.geomgroup[1]
         self.vopt = mujoco.MjvOption()
@@ -123,7 +125,11 @@ class MjRenderContext:
     def upload_texture(self, tex_id):
         """Uploads given texture to the GPU"""
         self.gl_ctx.make_current()
-        mujoco.mjr_uploadTexture(self.model, self.con, tex_id)
+        mujoco.mjr_uploadTexture(self.model._model, self.con, tex_id)
+        
+    def upload_hfield(self, hfield_id):
+        self.gl_ctx.make_current()
+        mujoco.mjr_uploadHField(self.model._model, self.con, hfield_id)
 
     def render(self, width, height, camera_id=None, segmentation=False):
         viewport = mujoco.MjrRect(0, 0, width, height)
@@ -191,7 +197,9 @@ class MjRenderContext:
     def upload_texture(self, tex_id):
         """Uploads given texture to the GPU."""
         self.gl_ctx.make_current()
-        mujoco.mjr_uploadTexture(self.model, self.con, tex_id)
+        print("Upload Texture")
+        print(self.model._model)
+        mujoco.mjr_uploadTexture(self.model._model, self.con, tex_id)
 
     def __del__(self):
         # free mujoco rendering context and GL rendering context

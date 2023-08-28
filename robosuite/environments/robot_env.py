@@ -142,6 +142,7 @@ class RobotEnv(MujocoEnv):
         robot_configs=None,
         renderer="mujoco",
         renderer_config=None,
+        has_h_field=False,
     ):
         # First, verify that correct number of robots are being inputted
         self.env_configuration = env_configuration
@@ -224,6 +225,7 @@ class RobotEnv(MujocoEnv):
             hard_reset=hard_reset,
             renderer=renderer,
             renderer_config=renderer_config,
+            has_h_field=has_h_field,
         )
 
     def visualize(self, vis_settings):

@@ -8,6 +8,8 @@ from robosuite.environments.manipulation.single_arm_env import SingleArmEnv
 from robosuite.models.arenas import BinsArena
 from robosuite.models.objects import (
     BreadObject,
+    SandBoxObject,
+    ToolObject,
     BreadVisualObject,
     CanObject,
     CanVisualObject,
@@ -499,7 +501,7 @@ class PickPlace(SingleArmEnv):
             self.visual_objects.append(vis_obj)
 
         for obj_cls, obj_name in zip(
-            (MilkObject, BreadObject, CerealObject, CanObject),
+            (MilkObject, SandBoxObject, CerealObject, CanObject),
             self.obj_names,
         ):
             obj = obj_cls(name=obj_name)
@@ -680,9 +682,14 @@ class PickPlace(SingleArmEnv):
                 if "visual" in obj.name.lower():
                     self.sim.model.body_pos[self.obj_body_id[obj.name]] = obj_pos
                     self.sim.model.body_quat[self.obj_body_id[obj.name]] = obj_quat
-                else:
+                elif obj.__class__.__name__ != "SandBoxObject":
                     # Set the collision object joints
                     self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                else: 
+                    print("Tool")
+                    print(obj_pos)
+                    self.sim.model.body_pos[self.obj_body_id[obj.name]] = obj_pos
+                    self.sim.model.body_quat[self.obj_body_id[obj.name]] = obj_quat
 
         # Set the bins to the desired position
         self.sim.model.body_pos[self.sim.model.body_name2id("bin1")] = self.bin1_pos

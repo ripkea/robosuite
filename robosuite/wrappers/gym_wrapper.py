@@ -41,15 +41,16 @@ class GymWrapper(Wrapper, gym.Env):
         if keys is None:
             keys = []
             # Add object obs if requested
-            if self.env.use_object_obs:
-                keys += ["object-state"]
+            #if self.env.use_object_obs:
+            #    keys += ["object-state"]
             # Add image obs if requested
-            if self.env.use_camera_obs:
-                keys += [f"{cam_name}_image" for cam_name in self.env.camera_names]
+            #if self.env.use_camera_obs:
+            #    keys += [f"{cam_name}_image" for cam_name in self.env.camera_names]
             # Iterate over all robots to add to state
-            for idx in range(len(self.env.robots)):
-                keys += ["robot{}_proprio-state".format(idx)]
-        self.keys = keys
+            #for idx in range(len(self.env.robots)):
+            #    keys += ["robot{}_proprio-state".format(idx)]
+        self.keys=['tool_pos', 'tool_quat']
+        #self.keys = keys
 
         # Gym specific attributes
         self.env.spec = None
@@ -77,11 +78,13 @@ class GymWrapper(Wrapper, gym.Env):
             np.array: observations flattened into a 1d array
         """
         ob_lst = []
+        print("Keys ", self.keys)
+        print("Obs dict", obs_dict)
         for key in self.keys:
             if key in obs_dict:
                 if verbose:
                     print("adding key: {}".format(key))
-                ob_lst.append(np.array(obs_dict[key]).flatten())
+                ob_lst.append(np.array(obs_dict[key]).flatten().astype(np.float32))
         return np.concatenate(ob_lst)
 
     def reset(self, seed=None, options=None):
@@ -97,7 +100,10 @@ class GymWrapper(Wrapper, gym.Env):
             else:
                 raise TypeError("Seed must be an integer type!")
         ob_dict = self.env.reset()
-        return self._flatten_obs(ob_dict), {}
+
+        print("Observation Type: ", np.array(self._flatten_obs(ob_dict)))
+        #return self._flatten_obs(ob_dict), {}
+        return np.array(self._flatten_obs(ob_dict)).astype(np.float32), {}
 
     def step(self, action):
         """

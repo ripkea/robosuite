@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
-
+import random
 import numpy as np
 
 import robosuite
@@ -9,9 +9,18 @@ import robosuite.macros as macros
 import robosuite.utils.sim_utils as SU
 from robosuite.renderers.base import load_renderer_config
 from robosuite.utils import OpenCVRenderer, SimulationError, XMLError
-from robosuite.utils.binding_utils import MjRenderContextOffscreen, MjSim
+from robosuite.utils.binding_utils import MjRenderContextOffscreen, MjSim, MjRenderContext
+
+import xml.etree.ElementTree as ET
+import matplotlib.pyplot as plt
+try: 
+    from sand_simulator import SandSimulator
+except ImportError:
+    print("Sand Sim not found")
+field_size = 128
 
 REGISTERED_ENVS = {}
+
 
 
 def register_env(target_class):
@@ -98,11 +107,18 @@ class MujocoEnv(metaclass=EnvMeta):
         hard_reset=True,
         renderer="mujoco",
         renderer_config=None,
+        has_h_field=False,
     ):
+
+            
         # If you're using an onscreen renderer, you must be also using an offscreen renderer!
         if has_renderer and not has_offscreen_renderer:
             has_offscreen_renderer = True
 
+        if has_h_field:
+    	    self.has_h_field = True
+    	    self.is_hf_init = False
+            
         # Rendering-specific attributes
         self.has_renderer = has_renderer
         # offscreen renderer needed for on-screen rendering
@@ -135,6 +151,9 @@ class MujocoEnv(metaclass=EnvMeta):
 
         # Initialize the simulation
         self._initialize_sim()
+        
+        render_context = MjRenderContext(self.sim)
+        self.sim.add_render_context(render_context)
 
         # initializes the rendering
         self.initialize_renderer()
@@ -222,9 +241,27 @@ class MujocoEnv(metaclass=EnvMeta):
         """
         xml = xml_string if xml_string else self.model.get_xml()
 
+
+        #print(xml)
+
         # process the xml before initializing sim
         if self._xml_processor is not None:
+        
             xml = self._xml_processor(xml)
+
+        xml_root = ET.fromstring(xml)
+
+        if self.has_h_field:
+            for child in xml_root:
+
+                if child.tag == "contact":
+                    new_child_tag = ET.SubElement(child, 'exclude')
+                    new_child_tag.set('name','tool_excluder')
+                    new_child_tag.set('body1','gripper0_tool_body')
+                    new_child_tag.set('body2','sand_box_main')
+
+
+            xml = ET.tostring(xml_root, encoding="utf-8").decode('utf-8')
 
         # Create the simulation instance
         self.sim = MjSim.from_xml_string(xml)
@@ -279,6 +316,7 @@ class MujocoEnv(metaclass=EnvMeta):
             else self._get_observations(force_update=True)
         )
 
+
         # Return new observations
         return observations
 
@@ -296,7 +334,8 @@ class MujocoEnv(metaclass=EnvMeta):
 
         if self.has_offscreen_renderer:
             if self.sim._render_context_offscreen is None:
-                render_context = MjRenderContextOffscreen(self.sim, device_id=self.render_gpu_device_id)
+                self.render_context = MjRenderContextOffscreen(self.sim, device_id=self.render_gpu_device_id)
+
             self.sim._render_context_offscreen.vopt.geomgroup[0] = 1 if self.render_collision_mesh else 0
             self.sim._render_context_offscreen.vopt.geomgroup[1] = 1 if self.render_visual_mesh else 0
 
@@ -360,6 +399,9 @@ class MujocoEnv(metaclass=EnvMeta):
             observations[modality] = np.concatenate(obs, axis=-1)
 
         return observations
+        
+    def get_model_and_data(self):
+        return self.sim.model, self.sim.data
 
     def step(self, action):
         """
@@ -388,6 +430,25 @@ class MujocoEnv(metaclass=EnvMeta):
 
         # Loop through the simulation at the model timestep rate until we're ready to take the next policy step
         # (as defined by the control frequency specified at the environment level)
+        
+        if self.has_h_field and not self.is_hf_init :
+            tool_body_id = self.sim.model.body_name2id("gripper0_tool_body")
+            self.sand_simulator = SandSimulator(self.sim.model._model, self.sim.data._data, tool_body_id, "gripper0_tool_geom_collision")
+            #self.sand_simulator = SandSimulator(self.sim.model._model, self.sim.data._data, -1, "gripper0_tool_geom_collision")
+            self.sand_simulator.initialize_heightfield()
+            print("Initializing Heightfield...")
+            self.is_hf_init = True
+            self.sim.model.hfield_data = np.copy(self.sand_simulator.get_scaled_heightfield())
+                  
+        print("-----Step-----")
+        if self.has_h_field:
+            self.sand_simulator.simulate_sand()
+            self.sim.model.hfield_data = np.copy(self.sand_simulator.get_scaled_heightfield())
+            self.render_context.upload_hfield(0)
+
+        #self.heightfield[0:64] += 5
+        #self.sim.model.hfield_data = np.copy(self.heightfield)*0.01
+        
         for i in range(int(self.control_timestep / self.model_timestep)):
             self.sim.forward()
             self._pre_action(action, policy_step)
@@ -397,6 +458,7 @@ class MujocoEnv(metaclass=EnvMeta):
 
         # Note: this is done all at once to avoid floating point inaccuracies
         self.cur_time += self.control_timestep
+        
 
         reward, done, info = self._post_action(action)
 
@@ -405,6 +467,7 @@ class MujocoEnv(metaclass=EnvMeta):
 
         observations = self.viewer._get_observations() if self.viewer_get_obs else self._get_observations()
         return observations, reward, done, info
+        
 
     def _pre_action(self, action, policy_step=False):
         """
@@ -429,8 +492,7 @@ class MujocoEnv(metaclass=EnvMeta):
         reward = self.reward(action)
 
         # done if number of elapsed timesteps is greater than horizon
-        self.done = (self.timestep >= self.horizon) and not self.ignore_done
-
+        self.done = ((self.timestep >= self.horizon) ) #or self.is_done_condition_fulfilled()
         return reward, self.done, {}
 
     def reward(self, action):

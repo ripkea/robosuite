@@ -145,7 +145,7 @@ class Lift(SingleArmEnv):
         use_camera_obs=True,
         use_object_obs=True,
         reward_scale=1.0,
-        reward_shaping=False,
+        reward_shaping=True,
         placement_initializer=None,
         has_renderer=False,
         has_offscreen_renderer=True,
@@ -164,6 +164,7 @@ class Lift(SingleArmEnv):
         camera_segmentations=None,  # {None, instance, class, element}
         renderer="mujoco",
         renderer_config=None,
+        has_h_field=False,
     ):
         # settings for table top
         self.table_full_size = table_full_size
@@ -179,6 +180,8 @@ class Lift(SingleArmEnv):
 
         # object placement initializer
         self.placement_initializer = placement_initializer
+        self.has_h_field = has_h_field
+        self.num_envs = 1
 
         super().__init__(
             robots=robots,
@@ -205,6 +208,7 @@ class Lift(SingleArmEnv):
             camera_segmentations=camera_segmentations,
             renderer=renderer,
             renderer_config=renderer_config,
+            has_h_field=has_h_field,
         )
 
     def reward(self, action=None):
@@ -256,6 +260,7 @@ class Lift(SingleArmEnv):
         if self.reward_scale is not None:
             reward *= self.reward_scale / 2.25
 
+        print("Reward: ", reward)
         return reward
 
     def _load_model(self):

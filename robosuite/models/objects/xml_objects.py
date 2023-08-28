@@ -74,6 +74,29 @@ class BreadObject(MujocoXMLObject):
             duplicate_collision_geoms=True,
         )
 
+class SandBoxObject(MujocoXMLObject):
+
+    def __init__(self, name):
+        super().__init__(
+            xml_path_completion("objects/sand_box.xml"),
+            name=name,
+            joints=None,
+            obj_type="all",
+            duplicate_collision_geoms=True,
+        )
+
+
+class ToolObject(MujocoXMLObject):
+
+    def __init__(self, name):
+        super().__init__(
+            xml_path_completion("objects/tool.xml"),
+            name=name,
+            joints=[dict(type="free", damping="0.0005")],
+            obj_type="all",
+            duplicate_collision_geoms=True,
+        )
+
 
 class CerealObject(MujocoXMLObject):
     """
@@ -88,6 +111,7 @@ class CerealObject(MujocoXMLObject):
             obj_type="all",
             duplicate_collision_geoms=True,
         )
+
 
 
 class SquareNutObject(MujocoXMLObject):
