@@ -1,0 +1,12 @@
+<mujoco model="sand_tool">
+  <worldbody>
+    <body>
+      <body name="object">
+        <geom name="sand_tool_geom" type="box" pos="0. 0 0" group="0" size="0.01 0.005 0.09" rgba="1.0 0 0 1" />
+      </body>
+      <site rgba="0 0 0 0" size="0.005" pos="0 0 -0.05" name="bottom_site"/>
+      <site rgba="0 0 0 0" size="0.005" pos="0 0 0.05" name="top_site"/>
+      <site rgba="0 0 0 0" size="0.005" pos="0 0 0.1" name="horizontal_radius_site"/>
+    </body>
+  </worldbody>
+</mujoco>

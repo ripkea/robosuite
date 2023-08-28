@@ -1,0 +1,15 @@
+<mujoco model="sand_box">
+  <asset>
+    <hfield name="terrain" nrow="128" ncol="128" size="0.064 0.064 .1 .01"/>
+  </asset>
+  <worldbody>
+    <body>
+      <body name="object">
+        <geom name="sand" type="hfield" hfield="terrain" pos="0. 0 0" group="1" rgba="1.0 0.69 0.31 1" />
+      </body>
+      <site rgba="0 0 0 0" size="0.1" pos="0 0 0" name="bottom_site"/>
+      <site rgba="0 0 0 0" size="0.005" pos="0 0 0" name="top_site"/>
+      <site rgba="0 0 0 0" size="0.005" pos="0.0 0 0" name="horizontal_radius_site"/>
+    </body>
+  </worldbody>
+</mujoco>
